@@ -90,7 +90,10 @@ long long next_opd(char const **sptr) {
 }
 
 int main() {
+	char const *testexpr = str_dup("13+5*(((8+9)*(4*6))+7)", 22);
 	char line[1024];
+	
+	assert(calculate(&testexpr) == 2088LL);
 	
 	while (fgets(line, 1024, stdin)) {
 		char const *lineptr = str_dup(line, strlen(line));
