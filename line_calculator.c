@@ -6,10 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void const *memdup(void const *, size_t, size_t);
-long long get_digit(char const **);
-long long next_opd(char const **);
-long long calculate(char const **);
+#include "line_calculator.h"
 
 #define is_opr(c) (c == '+' || c == '-' || c == '*' || c == '/')
 #define __skip(ptr, cond)                                                                                                        \
@@ -24,71 +21,79 @@ long long calculate(char const **);
 #define str_dup(data)		  (char const *)memdup((char const *)data, strlen(data), sizeof(char))
 #define strndup(data, length) (char const *)memdup((char const *)data, length, sizeof(char))
 
-void const *memdup(void const *data, size_t size, size_t size_of) {
+static void const *memdup(void const *, size_t, size_t);
+static long long getdigit(char const **);
+static long long getoper(char const **);
+static long long getresult(char const **);
+
+static void const *memdup(void const *data, size_t size, size_t size_of) {
 	void *dptr = calloc(size, sizeof(size_of));
 	assert(dptr != NULL);
 
 	return memcpy(dptr, data, size * size_of);
 }
 
-long long get_digit(char const **sptr) {
-	char const *dummy = *sptr;
+static long long getdigit(char const **sptr) {
+	char const *dummy = *sptr, *dptr = NULL;
+	long long digit = 0;
+
 	skip_digit(*sptr);
-	char const *dptr = strndup(dummy, *sptr - dummy);
-	long long digit	 = atoll(dptr);
+
+	dptr  = strndup(dummy, *sptr - dummy);
+	digit = atoll(dptr);
 
 	return free((char *)dptr), digit;
 }
 
-long long calculate(char const **sptr) {
+static long long getoper(char const **sptr) {
 	long long opd = 0;
 
-	if (**sptr == ')') { return opd; }
-	if (**sptr != 0) {
-		opd = next_opd(sptr);
-		skip_white(*sptr);
-
-		if (is_opr(**sptr)) {
-			int opr = next(sptr);
-			switch (opr) {
-				case '*': return opd * next_opd(sptr);
-				case '/': {
-					long long op2 = next_opd(sptr);
-					assert(op2 != 0);
-					return opd / op2;
-				}
-				case '+': return opd + calculate(sptr);
-				case '-': return opd - calculate(sptr);
-			}
-		}
-		return opd + calculate(sptr);
-	}
-	return opd;
-}
-
-long long next_opd(char const **sptr) {
-	long long opd = 0;
-
-	skip_white(*sptr);
 	if (isdigit(**sptr)) {
-		opd = get_digit(sptr);
+		opd = getdigit(sptr);
 	} else if (**sptr == '(') {
-		(void)(next(sptr));
-		opd = calculate(sptr);
-		skip_white(*sptr);
+		ptr_advance(*sptr);
+		opd = getresult(sptr);
 		assert(next(sptr) == ')');
 	}
 	return opd;
 }
 
-int main() {
-	char const *testexpr = str_dup("13+5*(((8+9)*(4*6))+7)");
-	char line[1024];
+static long long getresult(char const **sptr) {
+	long long opd = 0;
 
-	assert(calculate(&testexpr) == 2088LL);
+	if (**sptr == ')') { return opd; }
+	if (**sptr != 0) {
+		opd = getoper(sptr);
+		if (is_opr(**sptr)) {
+			int opr = next(sptr);
 
-	while (fgets(line, 1024, stdin)) {
-		char const *lineptr = str_dup(line);
-		printf("result: %lld\n", calculate(&lineptr));
+			switch (opr) {
+				case '*': return opd * getoper(sptr);
+				case '/': {
+					long long op2 = getoper(sptr);
+					assert(op2 != 0);
+					return opd / op2;
+				}
+				case '+': return opd + getresult(sptr);
+				case '-': return opd - getresult(sptr);
+			}
+		}
+		return opd + getresult(sptr);
 	}
+	return opd;
+}
+
+static void rm_white(char const *str) {
+	char *ptr = (char *)str;
+
+	for (; *str; *ptr++ = *str++) {
+		for (; isspace(*str); str++)
+			;
+	}
+	*ptr = 0;
+}
+
+long long calculate(char const *str) {
+	rm_white(str);
+	return getresult(&str);
 }
