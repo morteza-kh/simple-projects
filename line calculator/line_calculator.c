@@ -34,15 +34,14 @@ static void const *memdup(void const *data, size_t size, size_t size_of) {
 }
 
 static long long getdigit(char const **sptr) {
-	char const *dummy = *sptr, *dptr = NULL;
-	long long digit = 0;
+	char const *dummy = *sptr;
 
 	skip_digit(*sptr);
 
-	dptr  = strndup(dummy, *sptr - dummy);
-	digit = atoll(dptr);
+	char dptr[*sptr - dummy + 1];
+	strncpy(dptr, dummy, *sptr - dummy);
 
-	return free((char *)dptr), digit;
+	return atoll(dptr);
 }
 
 static long long getoper(char const **sptr) {
